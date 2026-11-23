@@ -13,23 +13,82 @@ Color map of roughly the same area
 ![color](./illustrations/swissTLMColor.png)
 
 ## Usage
-Haskape needs at least some input image and an output file name
+Haskape needs a configuration file describing all the different layers, an input image, the name of the output image and a range of altitude represented by the grayscale values of the source image.
 ```bash
-haskape zermatt-dem.jpeg zermatt-aerial.jpeg
+haskape --config ./configuration.xml --input ./geodata/interlaken.png --output ./aerial.png --altitude-range 556.27,4158.21
 ```
 
-We may specify many parameters such as
-- grass-color : hexadecimal color code
-- stone-color
-- water-color
-- snow-color
-- forest-color
+The configuration file looks like this
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<HaskapeConfiguration>
+  <SunDirection>
+    <dx>0.25</dx>
+    <dy>0.25</dy>
+  </SunDirection>
+  <shadeStrength>0.6</shadeStrength>
+  <fallBackColor>#F0F0F0</fallBackColor>
+  <Layers>
+    <Layer>
+        <name>Water</name>
+        <color>#0000FF</color>
+        <shade>False</shade>
+        <Bounds>
+            <minAltitude>556</minAltitude>
+            <maxAltitude>565</maxAltitude>
+            <minSlope>0.0</minSlope>
+            <maxSlope>1.0</maxSlope>
+        </Bounds>
+    </Layer>
+    <Layer>
+        <name>Grass</name>
+        <color>#46A028</color>
+        <shade>True</shade>
+        <Bounds>
+            <minAltitude>565</minAltitude>
+            <maxAltitude>2800</maxAltitude>
+            <minSlope>0.0</minSlope>
+            <maxSlope>0.8</maxSlope>
+        </Bounds>
+    </Layer>
+    <Layer>
+        <name>Forest</name>
+        <color>#BE5A1E</color>
+        <shade>True</shade>
+        <Bounds>
+            <minAltitude>565</minAltitude>
+            <maxAltitude>2800</maxAltitude>
+            <minSlope>0.8</minSlope>
+            <maxSlope>1.2</maxSlope>
+        </Bounds>
+    </Layer>
+    <Layer>
+        <name>Snow</name>
+        <color>#F0F5F5</color>
+        <shade>True</shade>
+        <Bounds>
+            <minAltitude>2800</minAltitude>
+            <maxAltitude>5000</maxAltitude>
+            <minSlope>0.0</minSlope>
+            <maxSlope>1.0</maxSlope>
+        </Bounds>
+    </Layer>
+    <Layer>
+        <name>Rocks</name>
+        <color>#466464</color>
+        <shade>True</shade>
+        <Bounds>
+            <minAltitude>565</minAltitude>
+            <maxAltitude>5000</maxAltitude>
+            <minSlope>1.2</minSlope>
+            <maxSlope>1000.0</maxSlope>
+        </Bounds>
+    </Layer>
+</Layers>  
+</HaskapeConfiguration>
+```
 
-- water-level : altitude of water surface
-- snow-level : altitude of snow
-- rock-slope
-- min-forest-slope
-- max-forest-slope
+The order of the layers is important because if multiple layers could apply to a pixel, the first one is selected.
 
 ## How it works
 We define a set of layers and rules to determine which layer to use for a given pixel.
