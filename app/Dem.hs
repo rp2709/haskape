@@ -1,6 +1,6 @@
 module Dem where
 
-import Codec.Picture hiding (Pixel, pixelAt)
+import Codec.Picture hiding (Pixel, pixelAt, PixelRGB8(..))
 import qualified Data.Vector.Storable as S
 import Data.Word (Word8, Word16)
 

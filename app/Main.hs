@@ -13,6 +13,7 @@ import ConfigParser (loadConfiguration)
 import Dem
 import Layer (HaskapeConfiguration)
 import Shade
+import qualified Data.Vector as V
 
 -- | Raw command-line state: options are filled in as they are encountered.
 data Options = Options
@@ -21,10 +22,11 @@ data Options = Options
   , optOutput :: Maybe FilePath
   , optRange  :: Maybe String
   , optHelp   :: Bool
+  , optOutputWidth :: Maybe Int
   }
 
 emptyOptions :: Options
-emptyOptions = Options Nothing Nothing Nothing Nothing False
+emptyOptions = Options Nothing Nothing Nothing Nothing False Nothing
 
 -- | Validated command-line arguments, ready to drive the conversion.
 data Config = Config
@@ -33,6 +35,7 @@ data Config = Config
   , outputPath  :: FilePath
   , altitudeMin :: Float
   , altitudeMax :: Float
+  , outputWidth :: Maybe Int
   }
 
 optionDescriptions :: [OptDescr (Options -> Options)]
@@ -49,6 +52,11 @@ optionDescriptions =
   , Option ['a'] ["altitude-range"]
       (ReqArg (\value opts -> opts { optRange = Just value }) "MIN,MAX")
       "altitudes mapped to the darkest and lightest input samples"
+  , Option ['w'] ["output-width"]
+      (OptArg (\value opts -> case value of
+        Nothing -> opts { optOutputWidth = Nothing}
+        Just str -> opts { optOutputWidth = Just $ read str}) "WIDTH")
+      "width of the output image, use to generate smaller images"
   , Option ['h'] ["help"]
       (NoArg (\opts -> opts { optHelp = True }))
       "show this help and exit"
@@ -91,6 +99,7 @@ validate leftovers optErrors opts =
         , outputPath  = outFile
         , altitudeMin = lo
         , altitudeMax = hi
+        , outputWidth = optOutputWidth opts
         }
     where 
         require :: String -> Maybe a -> Either String a
@@ -136,8 +145,15 @@ main = do
     Right (Right c)  -> pure c
 
   let scaled  = scaleWith (altitudeMin cfg) (altitudeMax cfg) grid
-      colorAt i = colorAndShade config (pixelAt scaled i)
-  saveImage (outputPath cfg) (gridWidth scaled) (gridHeight scaled) colorAt
+  case outputWidth cfg of
+    Nothing ->
+      let colorAt i = colorAndShade config (pixelAt scaled i)
+      in saveImage (outputPath cfg) (gridWidth scaled) (gridHeight scaled) colorAt
+    Just ow ->
+      let fullSize = V.generate (gridCount scaled) (\i -> colorAndShade config (pixelAt scaled i))
+          (lr,(lrWidth,lrHeight)) = scaleDown fullSize ((gridWidth scaled),(gridHeight scaled)) ow
+      in saveImage (outputPath cfg) lrWidth lrHeight (lr V.!)
+  
 
 dieWith :: String -> IO a
 dieWith message = hPutStrLn stderr message >> exitFailure
