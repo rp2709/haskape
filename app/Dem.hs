@@ -1,21 +1,43 @@
 module Dem where
 
-import Codec.Picture hiding (Pixel)
-import qualified Codec.Picture as JP
-import Data.List (transpose)
+import Codec.Picture hiding (Pixel, pixelAt)
+import qualified Data.Vector.Storable as S
+import Data.Word (Word8, Word16)
 
-type Grid = [[Float]]
+-- | A DEM is kept in the compact storable vector JuicyPixels gives us.
+--   Scaling parameters are stored instead of a second, boxed grid: samples
+--   are converted to altitudes only when a pixel is actually needed.
+data Grid
+  = Grid8  Int Int (S.Vector Word8)  Float Float
+  | Grid16 Int Int (S.Vector Word16) Float Float
+
+gridWidth :: Grid -> Int
+gridWidth  (Grid8 w _ _ _ _) = w
+gridWidth  (Grid16 w _ _ _ _) = w
+
+gridHeight :: Grid -> Int
+gridHeight  (Grid8 _ h _ _ _) = h
+gridHeight  (Grid16 _ h _ _ _) = h
+
+gridCount :: Grid -> Int
+gridCount g = gridWidth g * gridHeight g
+
+-- | Raw sample at a row-major index, mapped into the requested altitude range.
+sampleAt :: Grid -> Int -> Float
+sampleAt (Grid8  _ _ vector offset factor) i = fromIntegral (vector S.! i) * factor + offset
+sampleAt (Grid16 _ _ vector offset factor) i = fromIntegral (vector S.! i) * factor + offset
 
 -- | A 2D vector, used for slope gradients (and, later, the sun direction).
 data Vec = Vec Float Float deriving (Show, Eq)
 
 dotProduct :: Vec -> Vec -> Float
 dotProduct (Vec x1 y1) (Vec x2 y2) = x1*x2 + y1*y2
+
 norm :: Vec -> Float
 norm (Vec x y) = sqrt $ x*x + y*y
 
 -- | The slope at a pixel, expressed as a gradient vector.
-data Slope = Slope Vec deriving (Show, Eq)
+data Slope = Slope !Vec deriving (Show, Eq)
 
 -- | A terrain pixel: the altitude at a grid cell together with its slope.
 data Pixel = Pixel
@@ -26,62 +48,52 @@ data Pixel = Pixel
 loadGrid :: FilePath -> IO (Either String Grid)
 loadGrid path = do
     img <- readPng path
-    case img of
-        Left msg -> return $ Left msg
-        Right dynamicImage -> return $ toGrid dynamicImage
+    return $ case img of
+        Left msg          -> Left msg
+        Right dynamicImage -> toGrid dynamicImage
 
 toGrid :: DynamicImage -> Either String Grid
-toGrid (ImageY8  img) = Right (imageToGrid img)
-toGrid (ImageY16 img) = Right (imageToGrid img)
+toGrid (ImageY8 img)  = Right $ Grid8  (imageWidth img) (imageHeight img) (imageData img) 0 1
+toGrid (ImageY16 img) = Right $ Grid16 (imageWidth img) (imageHeight img) (imageData img) 0 1
 toGrid _              = Left "Unsupported format: expected 8 or 16 bit greyscale PNG"
 
-imageToGrid :: (JP.Pixel a, Integral a) => Image a -> Grid
-imageToGrid img =
-  [ [ fromIntegral (pixelAt img x y) | x <- [0 .. imageWidth img - 1] ] | y <- [0 .. imageHeight img - 1] ]
-
+-- | Replace the scaling parameters.
 scaleWith :: Float -> Float -> Grid -> Grid
-scaleWith altMin altMax img = map (map scale) img
+scaleWith altMin altMax (Grid8 w h raw _ _) =
+    let (offset, factor) = scaleParams altMin altMax (fromIntegral (S.minimum raw)) (fromIntegral (S.maximum raw))
+    in Grid8 w h raw offset factor
+scaleWith altMin altMax (Grid16 w h raw _ _) =
+    let (offset, factor) = scaleParams altMin altMax (fromIntegral (S.minimum raw)) (fromIntegral (S.maximum raw))
+    in Grid16 w h raw offset factor
+
+-- | @sample * factor + offset@ maps raw samples to the altitude range.
+--   For a flat image every sample becomes @altMin@.
+scaleParams :: Float -> Float -> Float -> Float -> (Float, Float)
+scaleParams altMin altMax lo hi
+  | range == 0 = (altMin, 0)
+  | otherwise  = (altMin - lo * factor, factor)
   where
-    values     = concat img -- flattens the image to then extact min and max values
-    imgMin     = minimum values
-    imgMax     = maximum values
-    pixelRange = imgMax - imgMin
-    factor     = (altMax - altMin) / pixelRange
-    scale p
-      | pixelRange == 0 = altMin -- a flat image has no altitude variation
-      | otherwise       = (p - imgMin) * factor + altMin
+    range  = hi - lo
+    factor = (altMax - altMin) / range
 
--- Differences between consecutive elements. The last element reuses the previous slope.
--- A row of length 0 or 1 has no neighbour: 
-diffsRepeatLast :: [Float] -> [Float]
-diffsRepeatLast xs =
-  case zipWith (-) (drop 1 xs) xs of
-    [] -> map (const 0) xs
-    ds -> ds ++ [last ds]
-
--- Pass 1: slopeX = value[x+1] - value[x], per row
-slopeX :: Grid -> Grid
-slopeX = map diffsRepeatLast
-
--- Pass 2: slopeY = value[y+1] - value[y], per column.
--- A column is a row of the transpose, so reuse the same function.
-slopeY :: Grid -> Grid
-slopeY = transpose . map diffsRepeatLast . transpose
-
--- Zip both components together: one (dx, dy) per pixel, same shape as the image
-slopes :: Grid -> [[(Float,Float)]]
-slopes g = zipWith zip (slopeX g) (slopeY g)
-
--- | Flatten an altitude grid and zip each altitude with the slope at the same
---   position, producing one 'Pixel' per image pixel (row-major order).
-pixels :: Grid -> [Pixel]
-pixels altitudes = zipWith Pixel (concat altitudes) (map toSlope (concat (slopes altitudes)))
+slopeAt :: Grid -> Int -> (Float, Float)
+slopeAt g i = (dx, dy)
   where
-    toSlope (dx, dy) = Slope (Vec dx dy)
+    w    = gridWidth g
+    h    = gridHeight g
+    x    = i `rem` w
+    y    = i `div` w
+    here = sampleAt g i
 
--- | Whole pipeline: open the image with JuicyPixels, rescale the raw pixel
---   values to the requested altitude range, then produce the flat 'Pixel' list.
-loadPixels :: FilePath -> Float -> Float -> IO (Either String [Pixel])
-loadPixels path altMin altMax = do
-    result <- loadGrid path
-    return (fmap (pixels . scaleWith altMin altMax) result)
+    dx | w <= 1    = 0
+       | x == w-1  = here - sampleAt g (i - 1)
+       | otherwise = sampleAt g (i + 1) - here
+
+    dy | h <= 1    = 0
+       | y == h-1  = here - sampleAt g (i - w)
+       | otherwise = sampleAt g (i + w) - here
+
+pixelAt :: Grid -> Int -> Pixel
+pixelAt g i =
+    let (dx, dy) = slopeAt g i
+    in Pixel (sampleAt g i) (Slope (Vec dx dy))

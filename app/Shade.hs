@@ -1,26 +1,21 @@
 module Shade where
 
-import Codec.Picture hiding(Pixel)
-import qualified Data.Vector as V
+import Codec.Picture (DynamicImage(..), Pixel8, PixelRGB8(..), generateImage, savePngImage)
 import Layer
 import Dem
 
-data Sun = Sun Vec deriving(Show)
+sunDirection :: Vec
+sunDirection = Vec (-0.25) (-0.25)
 
-shouldShade :: Layer -> Bool
-shouldShade Water = False
-shouldShade _ = True
-
-shade :: Layer -> LayerBounds -> LayerColor -> Float -> Slope -> Sun -> LayerColor
-shade Water layerBounds color altitude _ _ = 
+shade :: Layer -> LayerBounds -> LayerColor -> Float -> Slope -> Vec -> LayerColor
+shade Water layerBounds color altitude _ _ =
     let diff = maxAlti layerBounds - altitude in if diff > 10 then color else luminescence color (diff/10)
-
-shade _ _ color _ (Slope slopeVector) (Sun sunVector) = luminescence color $ - cosPhi sunVector slopeVector
+shade _ _ color _ (Slope slopeVector) _ = luminescence color $ - cosPhi sunDirection slopeVector
 
 cosPhi :: Vec -> Vec -> Float
 cosPhi v1 v2 = (dotProduct v1 v2) / ((norm v1)*(norm v2))
 
--- Maximum strength of the effect. At value = ±1 the color is moved this
+-- | Maximum strength of the effect. At value = ±1 the color is moved this
 -- fraction of the way toward white/black, so it never fully washes out.
 luminescenceStrength :: Float
 luminescenceStrength = 0.6
@@ -39,14 +34,18 @@ luminescence (PixelRGB8 r g b) value = PixelRGB8 (adjust r) (adjust g) (adjust b
     toWord8 :: Float -> Pixel8
     toWord8 = fromIntegral . max 0 . min 255 . (round :: Float -> Int)
 
+fallbackColor :: LayerColor
+fallbackColor = PixelRGB8 128 128 128
+
 colorAndShade :: Config -> Pixel -> LayerColor
 colorAndShade config pixel =
-    let (layer,bounds,color) = determineLayer pixel config
-    in shade layer bounds color (pixelAltitude pixel) (pixelSlope pixel) (Sun (Vec 0.25 0.25))
+    case determineLayer pixel config of
+      Just (layer,bounds,color) -> shade layer bounds color (pixelAltitude pixel) (pixelSlope pixel) sunDirection
+      -- defaults to gray rocks  if there is no match in the configuration
+      Nothing -> shade Rocks (LayerBounds 0 0 0 0) fallbackColor (pixelAltitude pixel) (pixelSlope pixel) sunDirection
 
-
-saveImage :: String -> Int -> Int -> [PixelRGB8] -> IO ()
-saveImage path w h pixels = savePngImage path (ImageRGB8 img)
+-- ColorAt is a closure containing everything necessary to compute the color of pixel i
+saveImage :: FilePath -> Int -> Int -> (Int -> LayerColor) -> IO ()
+saveImage path w h colorAt = savePngImage path (ImageRGB8 img)
   where
-    v   = V.fromList pixels
-    img = generateImage (\x y -> v V.! (y * w + x)) w h
+    img = generateImage (\x y -> colorAt (y * w + x)) w h
