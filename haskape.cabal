@@ -63,7 +63,7 @@ executable haskape
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    other-modules:    Dem, Layer, Shade
+    other-modules:    Dem, Layer, Shade, ConfigParser
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -71,7 +71,9 @@ executable haskape
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.22.0.0,
                       JuicyPixels,
-                      vector
+                      vector,
+                      bytestring,
+                      xml
 
     -- Directories containing source files.
     hs-source-dirs:   app
