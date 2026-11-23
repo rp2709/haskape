@@ -4,12 +4,12 @@
     <dx>0.25</dx>
     <dy>0.25</dy>
   </SunDirection>
-  <shadeStrength>0.6</shadeStrength>
+  <shadeStrength>0.4</shadeStrength>
   <fallBackColor>#F0F0F0</fallBackColor>
   <Layers>
     <Layer>
         <name>Water</name>
-        <color>#0000FF</color>
+        <color>#d3eeff</color>
         <shade>False</shade>
         <Bounds>
             <minAltitude>556</minAltitude>
@@ -20,16 +20,16 @@
     </Layer>
     <Layer>
         <name>Grass</name>
-        <color>#46A028</color>
+        <color>#cde8bc</color>
         <shade>True</shade>
         <Bounds>
             <minAltitude>565</minAltitude>
             <maxAltitude>2800</maxAltitude>
             <minSlope>0.0</minSlope>
-            <maxSlope>0.8</maxSlope>
+            <maxSlope><!--0.8-->1.2</maxSlope>
         </Bounds>
     </Layer>
-    <Layer>
+    <!--<Layer>
         <name>Forest</name>
         <color>#BE5A1E</color>
         <shade>True</shade>
@@ -39,10 +39,10 @@
             <minSlope>0.8</minSlope>
             <maxSlope>1.2</maxSlope>
         </Bounds>
-    </Layer>
+    </Layer>-->
     <Layer>
         <name>Snow</name>
-        <color>#F0F5F5</color>
+        <color>#d5dcdd</color>
         <shade>True</shade>
         <Bounds>
             <minAltitude>2800</minAltitude>
@@ -53,12 +53,23 @@
     </Layer>
     <Layer>
         <name>Rocks</name>
-        <color>#466464</color>
+        <color>#ebe9e7</color>
         <shade>True</shade>
         <Bounds>
             <minAltitude>565</minAltitude>
             <maxAltitude>5000</maxAltitude>
             <minSlope>1.2</minSlope>
+            <maxSlope>2.5</maxSlope>
+        </Bounds>
+    </Layer>
+    <Layer>
+        <name>Cliff</name>
+        <color>#bdbcbc</color>
+        <shade>True</shade>
+        <Bounds>
+            <minAltitude>565</minAltitude>
+            <maxAltitude>5000</maxAltitude>
+            <minSlope>2.5</minSlope>
             <maxSlope>1000.0</maxSlope>
         </Bounds>
     </Layer>
