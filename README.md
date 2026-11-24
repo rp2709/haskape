@@ -26,7 +26,7 @@ The configuration file looks like this
     <dx>0.25</dx>
     <dy>0.25</dy>
   </SunDirection>
-  <shadeStrength>0.6</shadeStrength>
+  <shadeStrength>0.4</shadeStrength>
   <fallBackColor>#F0F0F0</fallBackColor>
   <Layers>
     <Layer>
@@ -49,17 +49,6 @@ The configuration file looks like this
             <maxAltitude>2800</maxAltitude>
             <minSlope>0.0</minSlope>
             <maxSlope>0.8</maxSlope>
-        </Bounds>
-    </Layer>
-    <Layer>
-        <name>Forest</name>
-        <color>#BE5A1E</color>
-        <shade>True</shade>
-        <Bounds>
-            <minAltitude>565</minAltitude>
-            <maxAltitude>2800</maxAltitude>
-            <minSlope>0.8</minSlope>
-            <maxSlope>1.2</maxSlope>
         </Bounds>
     </Layer>
     <Layer>
