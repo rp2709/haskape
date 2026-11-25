@@ -63,7 +63,7 @@ executable haskape
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    other-modules:    Dem, Layer, Shade, ConfigParser
+    other-modules:    CommandLine, Dem, Layer, Shade, ConfigParser
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -79,4 +79,26 @@ executable haskape
     hs-source-dirs:   app
 
     -- Base language which the package is written in.
+    default-language: Haskell2010
+
+test-suite haskape-test
+    -- Import common warning flags.
+    import:           warnings
+
+    type:             exitcode-stdio-1.0
+    main-is:          Spec.hs
+
+    -- Reuse the application modules so the tests can exercise them directly.
+    other-modules:    CommandLine, ConfigParser, Dem, Layer, Shade,
+                      ConfigParserSpec, DemSpec, LayerSpec, MainSpec, ShadeSpec
+
+    build-depends:    base ^>=4.22.0.0,
+                      JuicyPixels,
+                      bytestring,
+                      hspec >=2.11 && <3,
+                      vector,
+                      xml
+
+    hs-source-dirs:   test, app
+
     default-language: Haskell2010

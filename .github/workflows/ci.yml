@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up GHC and Cabal
+        id: setup-haskell
+        uses: haskell-actions/setup@v2
+        with:
+          ghc-version: '9.14.1'
+          cabal-version: '3.16'
+
+      - name: Cache Cabal store and build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.setup-haskell.outputs.cabal-store }}
+            dist-newstyle
+          key: ${{ runner.os }}-cabal-${{ hashFiles('**/*.cabal', 'cabal.project*') }}
+          restore-keys: |
+            ${{ runner.os }}-cabal-
+
+      - name: Update package index
+        run: cabal update
+
+      - name: Build
+        run: cabal build all
+
+      - name: Run tests
+        run: cabal test --test-show-details=always

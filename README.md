@@ -111,5 +111,15 @@ rm interlaken.vrt
 
 Gdal uses format-specific drivers to export images. PNG only supports 8 bits or 16 bits values, JPEG 8 or 12 bits. I will be using these formats for the sake of simplicity, but this implies the addition of two parameters for min and max values. This will allow our program to map integers of any size to a range of float.
 
+## Tests
+
+The test suite uses [hspec](https://hspec.github.io/) and covers configuration
+parsing, DEM scaling and slope computation, layer selection, shading/colouring,
+image downscaling and command-line validation.
+
+```bash
+cabal test
+```
+
 ## Limitations
 The only base information is the elevation data. That is insufficient to accurately guess where water streams and lakes are. Giving a fixed altitude range does not work very well in this example because lake Thun and lake Brienz are quite a few meters appart, with sharp drop in altitude in the city of interlaken. Therefore parts of the city is below the surface of lake Brienz and appears blue. There is also no real way of knowing if we are looking at buildings, roads, forest or anything. An interesting addition would be to also take land use data, but then altitude is mostly there to provide shading.

@@ -3,17 +3,17 @@ module Layer where
 import Codec.Picture (PixelRGB8)
 import Dem (Pixel(..), Slope(..), norm, Vec)
 
-data Layer = Layer String PixelRGB8 Bool LayerBounds deriving(Show)
+data Layer = Layer String PixelRGB8 Bool LayerBounds deriving(Show, Eq)
 
 data LayerBounds = LayerBounds{
     minAlti :: Float,
     maxAlti :: Float,
     minSlope :: Float,
     maxSlope :: Float
-} deriving(Show)
+} deriving(Show, Eq)
 
 -- sunDirection, shadeStrength, layers
-data HaskapeConfiguration = HaskapeConfiguration Vec Float PixelRGB8 [Layer]
+data HaskapeConfiguration = HaskapeConfiguration Vec Float PixelRGB8 [Layer] deriving (Show, Eq)
 
 determineLayer :: Pixel -> [Layer] -> Maybe Layer
 determineLayer _ [] = Nothing

@@ -90,7 +90,7 @@ slopeAt g i = (dx, dy)
        | otherwise = sampleAt g (i + 1) - here
 
     dy | h <= 1    = 0
-       | y == h-1  = here - sampleAt g (i - w)
+       | y == h-1  = here - sampleAt g (i - (h - 1) * w)
        | otherwise = sampleAt g (i + w) - here
 
 pixelAt :: Grid -> Int -> Pixel

@@ -9,7 +9,9 @@ shade :: Float -> PixelRGB8 -> Slope -> Vec -> PixelRGB8
 shade strength color (Slope slopeVector) sun = luminescence strength color $ cosPhi sun slopeVector
 
 cosPhi :: Vec -> Vec -> Float
-cosPhi v1 v2 = (dotProduct v1 v2) / ((norm v1)*(norm v2))
+cosPhi v1 v2
+  | norm v1 == 0 || norm v2 == 0 = 0
+  | otherwise = (dotProduct v1 v2) / ((norm v1)*(norm v2))
 
 luminescence :: Float -> PixelRGB8 -> Float -> PixelRGB8
 luminescence strength (PixelRGB8 r g b) value = PixelRGB8 (adjust r) (adjust g) (adjust b)
