@@ -94,7 +94,7 @@ The exemples all use Swisstopo's SwissAlti3d digital elevation model, with a pre
 
 ```bash
 # construct the virtual dataset from all geotiff tiles
-ls | grep "*.tif" > tiles.txt && gdal raster mosaic tiles.txt swissalti3d.vrt && rm tiles.txt
+ls | grep -E "*.tif" > tiles.txt && gdal raster mosaic @tiles.txt swissalti3d.vrt && rm tiles.txt
 
 # clip virtual dataset to desired area
 gdal raster clip --bbox 2625189,1151996,2650125,1176025 swissalti3d.vrt interlaken.vrt
